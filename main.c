@@ -12,6 +12,7 @@ GtkImage *source;
 GtkImage *filtered;
 GtkNotebook *notebook;
 GtkLabel *error;
+GtkWidget *spinner;
 
 static gchar *filename = NULL;
 
@@ -42,13 +43,15 @@ get_device_id(void)
 	return id;
 }
 
-struct MemoryStruct{
+struct MemoryStruct
+{
 	char *memory;
 	size_t size;
 };
 
 static size_t
-write_memory(void *contents, size_t size, size_t nmemb, void *userp){
+write_memory(void *contents, size_t size, size_t nmemb, void *userp)
+{
 	size_t realsize = size * nmemb;
 	struct MemoryStruct *mem = (struct MemoryStruct *)userp;
 
@@ -141,10 +144,19 @@ upload_photo(GtkWidget *widget,
 	struct MemoryStruct chunk;
 	chunk.memory = malloc(1);
 
+	if(gtk_label_get_text(error))
+		gtk_label_set_text(error, "");
+	
+	gtk_spinner_start(GTK_SPINNER(spinner));
+
+	while (gtk_events_pending ())
+		gtk_main_iteration ();
+	
 	curl_request(FACEAPP_URL_API, "POST", deviceID, &chunk);
 
 	if(strstr(chunk.memory, "\"err\"")){
 		gtk_label_set_text(error, chunk.memory);
+		gtk_spinner_stop(GTK_SPINNER(spinner)); 
 		free(deviceID);
 		free(chunk.memory);
 		return;
@@ -165,6 +177,9 @@ upload_photo(GtkWidget *widget,
 			break;
 		}
 
+	while (gtk_events_pending ())
+		gtk_main_iteration ();
+	
 	char *get_image_url = malloc(strlen(FACEAPP_URL_API) + 1 +
 	                             strlen(code) +
 	                             strlen("/filters/") +
@@ -173,6 +188,10 @@ upload_photo(GtkWidget *widget,
 	sprintf(get_image_url, "%s/%s/filters/%s?cropped=%s", FACEAPP_URL_API, code, filter_name, cropped); 
 
 	curl_request(get_image_url, "GET", deviceID, &chunk);
+	
+	while (gtk_events_pending ())
+		gtk_main_iteration ();
+	
 
 	GdkPixbufLoader *loader = gdk_pixbuf_loader_new();
 	gdk_pixbuf_loader_write (loader,
@@ -183,6 +202,8 @@ upload_photo(GtkWidget *widget,
 
 	gtk_image_set_from_pixbuf(filtered, pixbuf_filtered);
 	gtk_notebook_set_current_page(notebook, 1);
+
+	gtk_spinner_stop(GTK_SPINNER(spinner));
 
 	gdk_pixbuf_loader_close(loader, NULL);
 
@@ -213,6 +234,7 @@ activate (GtkApplication *app,
 	combobox = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "ComboBox"));
 	notebook = GTK_NOTEBOOK(gtk_builder_get_object(builder, "Notebook"));
 	error = GTK_LABEL(gtk_builder_get_object(builder, "Error"));
+	spinner = GTK_WIDGET(gtk_builder_get_object(builder, "Spinner")); 
 
 	g_signal_connect(open, "file-set", G_CALLBACK(get_filename), NULL);
 	g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);

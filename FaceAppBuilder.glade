@@ -35,6 +35,7 @@ Author: megumintyan
     <property name="default_width">550</property>
     <property name="default_height">550</property>
     <property name="decorated">False</property>
+    <property name="show_menubar">False</property>
     <child>
       <placeholder/>
     </child>
@@ -101,6 +102,16 @@ Author: megumintyan
               </object>
               <packing>
                 <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSpinner" id="Spinner">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="margin_left">5</property>
+              </object>
+              <packing>
+                <property name="position">3</property>
               </packing>
             </child>
           </object>
