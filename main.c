@@ -23,8 +23,60 @@ get_filename(GtkFileChooserButton *widget,
 	if(filename)
 		free(filename);
 
-	filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(widget));
+	filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(widget)); 
 	gtk_image_set_from_file(source, filename);
+	gtk_notebook_set_current_page(notebook, 0);
+}
+
+void
+save_photo(GtkWidget *widget,
+           gpointer  data)
+{
+	if(gtk_image_get_pixbuf(filtered) == NULL){
+		gtk_label_set_text(error, "error: no image to save");
+		return;
+	}
+	
+	GtkWidget *dialog;
+	GtkFileChooser *chooser;
+	GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SAVE;
+	gint res;
+
+	dialog = gtk_file_chooser_dialog_new("Save File",
+	                                     data,
+	                                     action,
+	                                     "_Cancel",
+	                                     GTK_RESPONSE_CANCEL,
+	                                     "_Save",
+	                                     GTK_RESPONSE_ACCEPT,
+	                                     NULL);
+	chooser = GTK_FILE_CHOOSER(dialog);
+
+	gtk_file_chooser_set_do_overwrite_confirmation(chooser, TRUE);
+
+	res = gtk_dialog_run(GTK_DIALOG(dialog));
+	if(res == GTK_RESPONSE_ACCEPT)
+		{
+			char *fname;
+			GError *err = NULL; 
+			fname = gtk_file_chooser_get_filename(chooser);
+			res = gdk_pixbuf_save(gtk_image_get_pixbuf(filtered),
+			                      fname,
+			                      "jpeg",
+			                      &err,
+			                      "quality",
+			                      "100",
+			                      NULL); 
+			
+			if(res)
+				gtk_label_set_text(error, "image saved");
+			else
+				gtk_label_set_text(error, err->message);
+
+			
+			g_free(fname);
+		}
+	gtk_widget_destroy(dialog);
 }
 
 char *
@@ -149,8 +201,8 @@ upload_photo(GtkWidget *widget,
 	
 	gtk_spinner_start(GTK_SPINNER(spinner));
 
-	while (gtk_events_pending ())
-		gtk_main_iteration ();
+	while(gtk_events_pending())
+		gtk_main_iteration();
 	
 	curl_request(FACEAPP_URL_API, "POST", deviceID, &chunk);
 
@@ -177,8 +229,8 @@ upload_photo(GtkWidget *widget,
 			break;
 		}
 
-	while (gtk_events_pending ())
-		gtk_main_iteration ();
+	while(gtk_events_pending())
+		gtk_main_iteration();
 	
 	char *get_image_url = malloc(strlen(FACEAPP_URL_API) + 1 +
 	                             strlen(code) +
@@ -189,16 +241,15 @@ upload_photo(GtkWidget *widget,
 
 	curl_request(get_image_url, "GET", deviceID, &chunk);
 	
-	while (gtk_events_pending ())
-		gtk_main_iteration ();
-	
+	while(gtk_events_pending())
+		gtk_main_iteration(); 
 
 	GdkPixbufLoader *loader = gdk_pixbuf_loader_new();
-	gdk_pixbuf_loader_write (loader,
-	                         chunk.memory,
-	                         chunk.size,
-	                         NULL);
-	GdkPixbuf *pixbuf_filtered = gdk_pixbuf_loader_get_pixbuf (loader);
+	gdk_pixbuf_loader_write(loader,
+	                        chunk.memory,
+	                        chunk.size,
+	                        NULL);
+	GdkPixbuf *pixbuf_filtered = gdk_pixbuf_loader_get_pixbuf(loader);
 
 	gtk_image_set_from_pixbuf(filtered, pixbuf_filtered);
 	gtk_notebook_set_current_page(notebook, 1);
@@ -213,32 +264,44 @@ upload_photo(GtkWidget *widget,
 }
 
 static void
-activate (GtkApplication *app,
+activate(GtkApplication *app,
           gpointer        user_data)
 {
 
 	GtkWidget *window;
 	GtkFileChooserButton *open;
-	GtkWidget *okbutton;
+	GtkWidget *ok;
 	GtkComboBoxText *combobox;
+	GtkWidget *bar;
+	GtkWidget *save;
+	GtkWidget *icon;
 
 	builder = gtk_builder_new_from_file("FaceAppBuilder.glade");
 	window = GTK_WIDGET(gtk_builder_get_object(builder, "MainWindow"));
 	gtk_window_set_title(GTK_WINDOW(window), "FaceAppGtk");
 
 	open = GTK_FILE_CHOOSER_BUTTON(gtk_builder_get_object(builder,
-	                                                "ChooseImageButton"));
+	                                                      "ChooseImageButton"));
 	source = GTK_IMAGE(gtk_builder_get_object(builder, "ImageSource"));
 	filtered = GTK_IMAGE(gtk_builder_get_object(builder, "ImageFiltered"));
-	okbutton = GTK_WIDGET(gtk_builder_get_object(builder, "OkButton"));
+	ok = GTK_WIDGET(gtk_builder_get_object(builder, "OkButton"));
 	combobox = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "ComboBox"));
 	notebook = GTK_NOTEBOOK(gtk_builder_get_object(builder, "Notebook"));
 	error = GTK_LABEL(gtk_builder_get_object(builder, "Error"));
-	spinner = GTK_WIDGET(gtk_builder_get_object(builder, "Spinner")); 
+	spinner = GTK_WIDGET(gtk_builder_get_object(builder, "Spinner"));
+	bar = GTK_WIDGET(gtk_builder_get_object(builder, "HeaderBar"));
+	icon = gtk_image_new_from_icon_name("gtk-floppy",
+	                                    GTK_ICON_SIZE_BUTTON); 
+	save = gtk_button_new_with_label("");
+	gtk_button_set_always_show_image(GTK_BUTTON(save), TRUE);
+	gtk_button_set_image(GTK_BUTTON(save), icon);
+	gtk_widget_set_tooltip_text(save, "Save image");
+	gtk_header_bar_pack_end(GTK_HEADER_BAR(bar), save);
 
 	g_signal_connect(open, "file-set", G_CALLBACK(get_filename), NULL);
 	g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
-	g_signal_connect(okbutton, "clicked", G_CALLBACK(upload_photo), combobox);
+	g_signal_connect(ok, "clicked", G_CALLBACK(upload_photo), combobox);
+	g_signal_connect(save, "clicked", G_CALLBACK(save_photo), window);
 
 	g_object_unref(builder);
 	gtk_widget_show_all(window);
@@ -246,16 +309,16 @@ activate (GtkApplication *app,
 }
 
 int
-main (int    argc,
+main(int    argc,
       char **argv)
 {
 	GtkApplication *app;
 	int status;
 
-	app = gtk_application_new ("org.gtk.faceapp", G_APPLICATION_FLAGS_NONE);
-	g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
-	status = g_application_run (G_APPLICATION (app), argc, argv);
-	g_object_unref (app);
+	app = gtk_application_new("org.gtk.faceapp", G_APPLICATION_FLAGS_NONE);
+	g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
+	status = g_application_run(G_APPLICATION(app), argc, argv);
+	g_object_unref(app);
 
 	return status;
 }
