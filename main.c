@@ -221,7 +221,7 @@ upload_photo(GtkWidget *widget,
 		curl_request(FACEAPP_URL_API, "POST", &chunk);
 		
 		if(code != NULL)
-			free; 
+			free(code); 
 		code = get_code(chunk.memory);
 	}
 	
