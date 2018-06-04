@@ -1,6 +1,6 @@
 SRCS = main.c
 OBJS = $(SRCS:.c=.o)
-CFLAGS = -g -O2 -std=gnu99 `pkg-config --cflags gtk+-3.0`
+CFLAGS = -O2 -std=gnu99 `pkg-config --cflags gtk+-3.0`
 LDFLAGS = -lcurl `pkg-config --libs gtk+-3.0`
 
 all: $(OBJS)
