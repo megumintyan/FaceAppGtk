@@ -55,14 +55,20 @@ save_photo(GtkWidget *widget,
 
 	gtk_file_chooser_set_do_overwrite_confirmation(chooser, TRUE);
 
+	char set_name[24];
+	sprintf(set_name, "%d", time(NULL));
+	gtk_file_chooser_set_current_name (chooser, set_name);
+	
 	res = gtk_dialog_run(GTK_DIALOG(dialog));
 	if(res == GTK_RESPONSE_ACCEPT)
 		{
 			char *fname;
 			GError *err = NULL; 
 			fname = gtk_file_chooser_get_filename(chooser);
+			char *extfname = malloc(strlen(fname) + strlen(".jpg") + 1);
+			sprintf(extfname, "%s.jpg", fname); 
 			res = gdk_pixbuf_save(gtk_image_get_pixbuf(filtered),
-			                      fname,
+			                      extfname,
 			                      "jpeg",
 			                      &err,
 			                      "quality",
@@ -76,6 +82,7 @@ save_photo(GtkWidget *widget,
 
 			
 			g_free(fname);
+			free(extfname);
 		}
 	gtk_widget_destroy(dialog);
 }
