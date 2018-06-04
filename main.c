@@ -14,15 +14,16 @@ GtkNotebook *notebook;
 GtkLabel *error;
 GtkWidget *spinner;
 
+char headerID[64];
+char *code = NULL;
+
 static gchar *filename = NULL;
+static gchar *oldfilename = NULL;
 
 void
 get_filename(GtkFileChooserButton *widget,
              gpointer             data)
 {
-	if(filename)
-		free(filename);
-
 	filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(widget)); 
 	gtk_image_set_from_file(source, filename);
 	gtk_notebook_set_current_page(notebook, 0);
@@ -95,6 +96,8 @@ get_device_id(void)
 	return id;
 }
 
+
+
 struct MemoryStruct
 {
 	char *memory;
@@ -143,8 +146,7 @@ get_code(char *json)
 
 void
 curl_request(char *url,
-             char *method,
-             char *deviceID,
+             char *method, 
              struct MemoryStruct *chunk)
 {
 	CURL *curl;
@@ -159,8 +161,7 @@ curl_request(char *url,
 	list = curl_slist_append(list, buf);
 
 	list = curl_slist_append(list, "User-agent: FaceApp/1.0.229 (Linux; Android 4.4)");
-	char headerID[64];
-	sprintf(headerID, "X-FaceApp-DeviceID: %s", deviceID);
+
 	list = curl_slist_append(list, headerID);
 
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory);
@@ -191,7 +192,7 @@ upload_photo(GtkWidget *widget,
 {
 
 	GtkComboBoxText *box = data;
-	char *deviceID = get_device_id();
+
 
 	struct MemoryStruct chunk;
 	chunk.memory = malloc(1);
@@ -203,13 +204,24 @@ upload_photo(GtkWidget *widget,
 
 	while(gtk_events_pending())
 		gtk_main_iteration();
+
+	if(filename != oldfilename){
+		
+		if(oldfilename != NULL)
+			free(oldfilename);
+		
+		oldfilename = filename;
+		curl_request(FACEAPP_URL_API, "POST", &chunk);
+		
+		if(code != NULL)
+			free; 
+		code = get_code(chunk.memory);
+	}
 	
-	curl_request(FACEAPP_URL_API, "POST", deviceID, &chunk);
 
 	if(strstr(chunk.memory, "\"err\"")){
 		gtk_label_set_text(error, chunk.memory);
 		gtk_spinner_stop(GTK_SPINNER(spinner)); 
-		free(deviceID);
 		free(chunk.memory);
 		return;
 	}
@@ -220,7 +232,7 @@ upload_photo(GtkWidget *widget,
 	                              "old",
 	                              "young"};
 
-	char *code = get_code(chunk.memory);
+	
 	gchar *filter_name = gtk_combo_box_text_get_active_text(box);
 	char cropped[] = "1";
 	for(int i = 0; i < sizeof(noncropped_filters)/sizeof(char *); i++)
@@ -239,7 +251,7 @@ upload_photo(GtkWidget *widget,
 	                             strlen("?cropped=") + 2);
 	sprintf(get_image_url, "%s/%s/filters/%s?cropped=%s", FACEAPP_URL_API, code, filter_name, cropped); 
 
-	curl_request(get_image_url, "GET", deviceID, &chunk);
+	curl_request(get_image_url, "GET", &chunk);
 	
 	while(gtk_events_pending())
 		gtk_main_iteration(); 
@@ -258,9 +270,7 @@ upload_photo(GtkWidget *widget,
 
 	gdk_pixbuf_loader_close(loader, NULL);
 
-	free(chunk.memory);
-	free(deviceID);
-	free(code);
+	free(chunk.memory); 
 }
 
 static void
@@ -276,6 +286,10 @@ activate(GtkApplication *app,
 	GtkWidget *save;
 	GtkWidget *icon;
 
+	char *deviceID = get_device_id();
+	sprintf(headerID, "X-FaceApp-DeviceID: %s", deviceID);
+	free(deviceID);
+ 
 	builder = gtk_builder_new_from_file("FaceAppBuilder.glade");
 	window = GTK_WIDGET(gtk_builder_get_object(builder, "MainWindow"));
 	gtk_window_set_title(GTK_WINDOW(window), "FaceAppGtk");
@@ -303,9 +317,10 @@ activate(GtkApplication *app,
 	g_signal_connect(ok, "clicked", G_CALLBACK(upload_photo), combobox);
 	g_signal_connect(save, "clicked", G_CALLBACK(save_photo), window);
 
+	
 	g_object_unref(builder);
 	gtk_widget_show_all(window);
-	gtk_main();
+	gtk_main(); 
 }
 
 int
