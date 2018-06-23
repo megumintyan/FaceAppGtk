@@ -34,7 +34,7 @@ Author: megumintyan
     <property name="vexpand">True</property>
     <property name="default_width">620</property>
     <property name="default_height">620</property>
-    <property name="decorated">False</property>
+    <property name="decorated">True</property>
     <property name="show_menubar">False</property>
     <child>
       <placeholder/>
@@ -51,7 +51,7 @@ Author: megumintyan
             <property name="can_focus">False</property>
             <property name="hexpand">True</property>
             <property name="title" translatable="yes">FaceAppGtk</property>
-            <property name="show_close_button">True</property>
+            <property name="show_close_button">False</property>
             <child>
               <object class="GtkFileChooserButton" id="ChooseImageButton">
                 <property name="visible">True</property>
