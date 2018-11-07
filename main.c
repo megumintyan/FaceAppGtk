@@ -5,7 +5,7 @@
 #include <curl/curl.h>
 
 #define ID_LENGTH 8
-#define FACEAPP_URL_API "https://node-01.faceapp.io/api/v2.7/photos"
+#define FACEAPP_URL_API "https://node-03.faceapp.io/api/v2.7/photos"
 
 GtkBuilder *builder;
 GtkImage *source;
@@ -167,7 +167,7 @@ curl_request(char *url,
 	curl = curl_easy_init();
 	list = curl_slist_append(list, buf);
 
-	list = curl_slist_append(list, "User-agent: FaceApp/1.0.229 (Linux; Android 4.4)");
+	list = curl_slist_append(list, "User-agent: FaceApp/2.0.957 (Linux; Android 4.4)");
 
 	list = curl_slist_append(list, headerID);
 
